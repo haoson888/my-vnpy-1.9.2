@@ -21,9 +21,9 @@ STATUS_FINISHED = set([STATUS_ALLTRADED, STATUS_CANCELLED, STATUS_REJECTED])
 ########################################################################
 
 class MyDmaAlgo(AlgoTemplate):
-    """DMA算法，直接发出限价或者市价委托"""
+    """梯形算法"""
 
-    templateName = u'My 开仓后平仓'
+    templateName = u'My 阶梯算法'
 
     #----------------------------------------------------------------------
     def __init__(self, engine, setting, algoName):
@@ -38,8 +38,8 @@ class MyDmaAlgo(AlgoTemplate):
         self.price = float(setting['price'])                # 开始价格
         self.volume =  float(setting['volume'])            #每次手数
         self.totalVolume = float(setting['totalVolume'])    # 限制总数量
-        self.spread = float(setting['spread'])  # 价差
-        self.interval = int(setting['interval']) # 间隔
+        self.spread = float(setting['spread'])  # 平仓价差
+        self.interval = int(setting['interval']) # 梯形间隔
 
         self.vtOrderID = ''     # 委托号
         self.tradedVolume = 0   # 成交数量
@@ -47,6 +47,9 @@ class MyDmaAlgo(AlgoTemplate):
         self.lastTick = None     # 最新Tick
 
         self.subscribe(self.vtSymbol)
+
+        # 下起始单
+        self.openOrder(self.price)
 
         self.paramEvent()
         self.varEvent()
@@ -56,25 +59,17 @@ class MyDmaAlgo(AlgoTemplate):
         """"""
         # 行情
         # 发出委托
-        """
-        if not self.vtOrderID:
-            if self.direction == DIRECTION_LONG:
-                func = self.buy
-            else:
-                func = self.sell
-
-            self.vtOrderID = func(self.vtSymbol, self.price, self.totalVolume,
-                                  self.priceType, self.offset)
-        """
-        self.lastTick = tick
+        # self.lastTick = tick
 
         # 多头
+        '''
         if self.direction == DIRECTION_LONG:
             # 如果没有委托，则发单
             if (not self.vtOrderID):
                 if (self.lastTick.bidPrice1 <= self.price):
                     self.buyOrder()
             # 如果最新行情买价高于委托价格，则撤单
+
             elif self.price > self.lastTick.bidPrice1:
                 self.cancelAll()
         # 空头
@@ -88,13 +83,23 @@ class MyDmaAlgo(AlgoTemplate):
 
 
         # 更新变量
+
         self.varEvent()
+        '''
 
     #----------------------------------------------------------------------
     def onTrade(self, trade):
         """"""
         # 成交
+        # 开仓成交后，立即加上平仓价差平仓
+        if self.vtOrderID == '':
+            self.closeOrder(self.price + self.spread)
+            # 然后按梯形间隔下开仓委托
+            self.price = self.price - self.interval
+            self.openOrder(self.price)
+
         # self.tradedVolume += trade
+        self.varEvent()
 
     #----------------------------------------------------------------------
     def onOrder(self, order):
@@ -164,8 +169,14 @@ class MyDmaAlgo(AlgoTemplate):
         d[u'间隔'] = self.interval
         self.putParamEvent(d)
 
-    def buyOrder(self):
-        self.vtOrderID = self.buy(self.vtSymbol, self.price)
+    def openOrder(self, openprice):
+        self.vtOrderID = self.buy(self.vtSymbol, openprice, self.volume,
+                                  self.priceType,self.offset)
+
+
+    def closeOrder(self,closeprice):
+        self.vtOrderID = self.sell(self.vtSymbol, closeprice,self.volume,
+                                   self.priceType, OFFSET_CLOSE)
 
 
 # 生成我们的UI类
