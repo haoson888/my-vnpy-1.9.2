@@ -13,7 +13,7 @@ from vnpy.trader.app.algoTrading.uiAlgoWidget import AlgoWidget, QtWidgets
 
 from six import text_type
 
-from vnpy.trader.app.algoTrading.AlgoUiHelper import generateWidgetClass
+# from vnpy.trader.app.algoTrading.AlgoUiHelper import generateWidgetClass
 
 STATUS_FINISHED = set([STATUS_ALLTRADED, STATUS_CANCELLED, STATUS_REJECTED])
 
