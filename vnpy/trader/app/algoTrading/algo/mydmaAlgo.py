@@ -36,8 +36,8 @@ class MyDmaAlgo(AlgoTemplate):
         self.offset = text_type(setting['offset'])          # 开平
         self.priceType = text_type(setting['priceType'])    # 价格类型
         self.price = float(setting['price'])                # 开始价格
-        self.totalVolume = float(setting['totalVolume'])    # 数量
-
+        self.volume =  float(setting['volume'])            #每次手数
+        self.totalVolume = float(setting['totalVolume'])    # 限制总数量
         self.spread = float(setting['spread'])  # 价差
         self.interval = int(setting['interval']) # 间隔
 
@@ -54,6 +54,7 @@ class MyDmaAlgo(AlgoTemplate):
     #----------------------------------------------------------------------
     def onTick(self, tick):
         """"""
+        # 行情
         # 发出委托
         """
         if not self.vtOrderID:
@@ -70,17 +71,20 @@ class MyDmaAlgo(AlgoTemplate):
         # 多头
         if self.direction == DIRECTION_LONG:
             # 如果没有委托，则发单
-            if not self.vtOrderID:
-                self.buyBestLimit()
-            # 如果最新行情买价和委托价格不等，则撤单
-            elif self.orderPrice != self.lastTick.bidPrice1:
+            if (not self.vtOrderID):
+                if (self.lastTick.bidPrice1 <= self.price):
+                    self.buyOrder()
+            # 如果最新行情买价高于委托价格，则撤单
+            elif self.price > self.lastTick.bidPrice1:
                 self.cancelAll()
         # 空头
         if self.direction == DIRECTION_SHORT:
             if not self.vtOrderID:
-                self.sellBestLimit()
+                #self.sellBestLimit()
+                pass
             elif self.orderPrice != self.lastTick.askPrice1:
-                self.cancelAll()
+                #self.cancelAll()
+                pass
 
 
         # 更新变量
@@ -89,22 +93,27 @@ class MyDmaAlgo(AlgoTemplate):
     #----------------------------------------------------------------------
     def onTrade(self, trade):
         """"""
-        pass
+        # 成交
+        # self.tradedVolume += trade
 
     #----------------------------------------------------------------------
     def onOrder(self, order):
         """"""
+        # 委托
+
         self.tradedVolume = order.tradedVolume
         self.orderStatus = order.status
 
         if self.orderStatus in STATUS_FINISHED:
-            self.stop()
+            # self.stop()
+            self.vtOrderID = ''
 
         self.varEvent()
 
     #----------------------------------------------------------------------
     def onTimer(self):
         """"""
+        '''
         self.count += 1
         if self.count < self.interval:
             return
@@ -121,7 +130,7 @@ class MyDmaAlgo(AlgoTemplate):
 
 
         self.varEvent()
-
+        '''
 
     #----------------------------------------------------------------------
     def onStop(self):
@@ -147,13 +156,17 @@ class MyDmaAlgo(AlgoTemplate):
         d[u'代码'] = self.vtSymbol
         d[u'方向'] = self.direction
         d[u'价格'] = self.price
-        d[u'数量'] = self.totalVolume
+        d[u'总量'] = self.totalVolume
         d[u'价格类型'] = self.priceType
         d[u'开平'] = self.offset
-
+        d[u'数量'] = self.volume
         d[u'价差'] = self.spread
         d[u'间隔'] = self.interval
         self.putParamEvent(d)
+
+    def buyOrder(self):
+        self.vtOrderID = self.buy(self.vtSymbol, self.price)
+
 
 # 生成我们的UI类
 class MyDmaWidget(AlgoWidget):
@@ -181,10 +194,10 @@ class MyDmaWidget(AlgoWidget):
         self.spinPrice.setMaximum(1000000000)
         self.spinPrice.setDecimals(8)
 
-        self.spinVolume = QtWidgets.QDoubleSpinBox()
-        self.spinVolume.setMinimum(0)
-        self.spinVolume.setMaximum(1000000000)
-        self.spinVolume.setDecimals(6)
+        self.spinTotalVolume = QtWidgets.QDoubleSpinBox()
+        self.spinTotalVolume.setMinimum(0)
+        self.spinTotalVolume.setMaximum(1000000000)
+        self.spinTotalVolume.setDecimals(6)
 
         self.comboPriceType = QtWidgets.QComboBox()
         self.comboPriceType.addItems([PRICETYPE_LIMITPRICE, PRICETYPE_MARKETPRICE])
@@ -203,6 +216,11 @@ class MyDmaWidget(AlgoWidget):
         self.spinInterval.setMinimum(0)
         self.spinInterval.setMaximum(1000000000)
         self.spinInterval.setDecimals(6)
+
+        self.spinVolume = QtWidgets.QDoubleSpinBox()
+        self.spinVolume.setMinimum(0)
+        self.spinVolume.setMaximum(1000000000)
+        self.spinVolume.setDecimals(6)
 
         buttonStart = QtWidgets.QPushButton(u'启动')
         buttonStart.clicked.connect(self.addAlgo)
@@ -227,6 +245,8 @@ class MyDmaWidget(AlgoWidget):
         grid.addWidget(self.spinSpread,6,1)
         grid.addWidget(Label(u'间隔'),7,0)
         grid.addWidget(self.spinInterval,7,1)
+        grid.addWidget(Label(u'总手数'),8,0)
+        grid.addWidget(self.spinTotalVolume,8,1)
 
         return grid
 
@@ -238,10 +258,10 @@ class MyDmaWidget(AlgoWidget):
         setting['vtSymbol'] = str(self.lineSymbol.text())
         setting['direction'] = text_type(self.comboDirection.currentText())
         setting['price'] = float(self.spinPrice.value())
-        setting['totalVolume'] = float(self.spinVolume.value())
+        setting['volume'] = float(self.spinVolume.value())
+        setting['totalVolume'] = float(self.spinTotalVolume.value())
         setting['priceType'] = text_type(self.comboPriceType.currentText())
         setting['offset'] = text_type(self.comboOffset.currentText())
-
         setting['spread'] = float(self.spinSpread.value())
         setting['interval'] = float(self.spinInterval.value())
 
