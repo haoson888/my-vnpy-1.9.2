@@ -48,6 +48,9 @@ class MyDmaAlgo(AlgoTemplate):
 
         self.subscribe(self.vtSymbol)
 
+        # 初始化成交记录dict
+        self.listTrader = []
+
         # 下起始单
         self.openOrder(self.price)
 
@@ -91,6 +94,9 @@ class MyDmaAlgo(AlgoTemplate):
     def onTrade(self, trade):
         """"""
         # 成交
+        # 记录成交信息
+        dir(trade)
+
         # 开仓成交后，立即加上平仓价差平仓
         if self.vtOrderID == '':
             self.closeOrder(self.price + self.spread)
@@ -178,6 +184,14 @@ class MyDmaAlgo(AlgoTemplate):
         self.vtOrderID = self.sell(self.vtSymbol, closeprice,self.volume,
                                    self.priceType, OFFSET_CLOSE)
 
+
+    def writeOrder(self):
+        # 把交易记录写在csv文件中
+        pass
+
+    def readOrder(self):
+        # 从CSV文件中读取交易记录
+        pass
 
 # 生成我们的UI类
 class MyDmaWidget(AlgoWidget):
