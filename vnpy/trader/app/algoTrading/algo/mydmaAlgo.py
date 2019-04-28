@@ -13,6 +13,9 @@ from vnpy.trader.app.algoTrading.uiAlgoWidget import AlgoWidget, QtWidgets
 
 from six import text_type
 
+import os
+import csv
+
 # from vnpy.trader.app.algoTrading.AlgoUiHelper import generateWidgetClass
 
 STATUS_FINISHED = set([STATUS_ALLTRADED, STATUS_CANCELLED, STATUS_REJECTED])
@@ -187,10 +190,29 @@ class MyDmaAlgo(AlgoTemplate):
 
     def writeOrder(self):
         # 把交易记录写在csv文件中
+        path1 = os.path.abspath(os.path.dirname(__file__))
+        with open('trader.csv','w+', encoding="utf-8") as f:
+            headers = [k for k in self.listTrader[0]]
+            writer = csv.DictWriter(f, fieldnames=headers)
+            writer.writeheader()
+            for dictionary in self.listTrader:
+                writer.writerow(dictionary)
+
         pass
 
     def readOrder(self):
         # 从CSV文件中读取交易记录
+        path1 = os.path.abspath(os.path.dirname(__file__))
+        with open("trader.csv", 'r',encoding="utf-8") as f:
+            reader = csv.reader(f)
+            fieldnames = next(reader) # 取数据第一列，作为dict的键名。
+            print (fieldnames)
+            csv_reader = csv.DictReader(f,fieldnames=fieldnames)
+            for row in csv_reader:
+                d = {}
+                for k, v in row.items():
+                    d[k] = v
+                print (d)
         pass
 
 # 生成我们的UI类
