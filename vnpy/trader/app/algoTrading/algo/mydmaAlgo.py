@@ -1,20 +1,21 @@
 # encoding: UTF-8
 
 from __future__ import division
+
+import csv
+import os
 from collections import OrderedDict
 
+from six import text_type
+
+from vnpy.trader.app.algoTrading import AlgoHelper
+
+from vnpy.trader.app.algoTrading.algoTemplate import AlgoTemplate
+from vnpy.trader.app.algoTrading.uiAlgoWidget import AlgoWidget, QtWidgets
 from vnpy.trader.vtConstant import (DIRECTION_LONG, DIRECTION_SHORT,
                                     OFFSET_OPEN, OFFSET_CLOSE,
                                     PRICETYPE_LIMITPRICE, PRICETYPE_MARKETPRICE,
                                     STATUS_REJECTED, STATUS_CANCELLED, STATUS_ALLTRADED)
-from vnpy.trader.uiQt import QtWidgets
-from vnpy.trader.app.algoTrading.algoTemplate import AlgoTemplate
-from vnpy.trader.app.algoTrading.uiAlgoWidget import AlgoWidget, QtWidgets
-
-from six import text_type
-
-import os
-import csv
 
 # from vnpy.trader.app.algoTrading.AlgoUiHelper import generateWidgetClass
 
@@ -53,6 +54,7 @@ class MyDmaAlgo(AlgoTemplate):
 
         # 初始化成交记录dict
         self.listTrader = []
+        self.listOrder = []
 
         # 下起始单
         self.openOrder(self.price)
@@ -98,7 +100,8 @@ class MyDmaAlgo(AlgoTemplate):
         """"""
         # 成交
         # 记录成交信息
-        dir(trade)
+        #dir(trade)
+        #print(trade)
 
         # 开仓成交后，立即加上平仓价差平仓
         if self.vtOrderID == '':
@@ -120,6 +123,9 @@ class MyDmaAlgo(AlgoTemplate):
 
         if self.orderStatus in STATUS_FINISHED:
             # self.stop()
+            d = []
+            d.append(AlgoHelper.getOrder(order))
+            AlgoHelper.writeCSV('order', d, 'a+')
             self.vtOrderID = ''
 
         self.varEvent()
@@ -191,8 +197,12 @@ class MyDmaAlgo(AlgoTemplate):
     def writeOrder(self):
         # 把交易记录写在csv文件中
         path1 = os.path.abspath(os.path.dirname(__file__))
-        with open('trader.csv','w+', encoding="utf-8") as f:
+        if len(self.listTrader) == 0:
+            return
+
+        with open('trader.csv','w+', encoding='utf-8') as f:
             headers = [k for k in self.listTrader[0]]
+            print(headers)
             writer = csv.DictWriter(f, fieldnames=headers)
             writer.writeheader()
             for dictionary in self.listTrader:
@@ -203,7 +213,7 @@ class MyDmaAlgo(AlgoTemplate):
     def readOrder(self):
         # 从CSV文件中读取交易记录
         path1 = os.path.abspath(os.path.dirname(__file__))
-        with open("trader.csv", 'r',encoding="utf-8") as f:
+        with open("trader.csv", 'r',encoding='utf-8') as f:
             reader = csv.reader(f)
             fieldnames = next(reader) # 取数据第一列，作为dict的键名。
             print (fieldnames)
@@ -213,6 +223,7 @@ class MyDmaAlgo(AlgoTemplate):
                 for k, v in row.items():
                     d[k] = v
                 print (d)
+                self.listTrader.append(d)
         pass
 
 # 生成我们的UI类
